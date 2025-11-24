@@ -29,7 +29,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nuelst/scnapack.git"
+    "url": "https://github.com/nuelst/scanpack.git"
   },
   "files": [
     "dist",

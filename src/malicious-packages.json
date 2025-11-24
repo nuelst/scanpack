@@ -1,0 +1,21 @@
+{
+  "packages": [
+    {
+      "name": "xdater",
+      "reason": "Package banned from npm for containing malicious scripts",
+      "severity": "high"
+    }
+  ],
+  "patterns": [
+    {
+      "pattern": ".*-malware",
+      "reason": "Suspicious pattern for malicious packages",
+      "severity": "high"
+    },
+    {
+      "pattern": ".*-virus",
+      "reason": "Suspicious pattern for malicious packages",
+      "severity": "high"
+    }
+  ]
+}
