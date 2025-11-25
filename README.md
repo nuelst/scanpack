@@ -10,6 +10,13 @@ Dependency scanner to detect unknown or malicious packages in Node.js and Bun pr
 - 🛡️ Automatically detects npm security holding packages (removed packages)
 - 📊 Generates detailed dependency report
 - 🚀 Supports Node.js and Bun projects
+- ⚡ Dynamic batch processing for optimal performance
+- 📈 Progress bar for visual feedback
+- 🚫 Ignore specific packages (`.scanpackignore` or `--ignore`)
+- 🔄 Rate limiting protection
+- 🤖 CI/CD mode for clean pipeline output
+- 🗑️ Auto-remove dangerous dependencies (`-rd` / `--remove-dangerous`)
+- 🔗 GitHub Actions integration
 
 ## 📦 Installation
 
@@ -35,7 +42,41 @@ scanpack --json
 
 # Verbose mode (more details)
 scanpack --verbose
+
+# CI/CD mode (minimal output, no colors)
+scanpack --ci
+
+# Ignore specific packages
+scanpack --ignore "internal-pkg,legacy-lib"
+
+# Rate limiting (requests per second)
+scanpack --rate-limit 5
+
+# Remove dangerous dependencies automatically
+scanpack -rd
+# or
+scanpack --remove-dangerous
+
+# Show help
+scanpack --help
 ```
+
+### Ignoring Packages
+
+You can ignore packages in two ways:
+
+1. **Command line flag:**
+   ```bash
+   scanpack --ignore "package1,package2"
+   ```
+
+2. **`.scanpackignore` file** (in project root):
+   ```
+   # Comments start with #
+   internal-package
+   @company/private-lib
+   legacy-lib
+   ```
 
 ### As Module
 
@@ -86,6 +127,18 @@ console.log(report);
 - `0`: All dependencies are valid
 - `1`: Found malicious dependencies
 - `2`: Found unknown dependencies (but not malicious)
+
+## ⚙️ Options
+
+| Option | Description |
+|--------|-------------|
+| `-v, --verbose` | Show detailed information and debug logs |
+| `-j, --json` | Output results in JSON format |
+| `-c, --ci` | CI/CD mode: minimal output, no colors, no progress bar |
+| `-i, --ignore <packages>` | Comma-separated list of packages to ignore |
+| `-r, --rate-limit <number>` | Maximum requests per second to npm registry (default: 10) |
+| `-rd, --remove-dangerous` | Automatically remove dangerous dependencies from package.json |
+| `-h, --help` | Display help information |
 
 ## 🛡️ Malicious Packages Detection
 

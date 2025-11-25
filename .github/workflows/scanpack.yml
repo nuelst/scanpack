@@ -1,0 +1,45 @@
+name: ScanPack Security Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build ScanPack
+        run: npm run build
+
+      - name: Run ScanPack
+        run: |
+          node dist/cli.js --ci --json > scanpack-report.json || true
+
+      - name: Check for malicious packages
+        run: |
+          if [ -f scanpack-report.json ]; then
+            MALICIOUS=$(jq -r '.maliciousDependencies' scanpack-report.json)
+            if [ "$MALICIOUS" -gt 0 ]; then
+              echo "❌ Found $MALICIOUS malicious dependencies!"
+              jq '.results[] | select(.isKnownMalicious == true or .isSecurityHolding == true)' scanpack-report.json
+              exit 1
+            else
+              echo "✅ All dependencies are safe."
+            fi
+          fi

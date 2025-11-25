@@ -32,3 +32,26 @@ export interface ValidationReport {
   results: ValidationResult[];
 }
 
+export interface MaliciousPackage {
+  name: string;
+  reason: string;
+  severity: string;
+}
+
+export interface MaliciousPattern {
+  pattern: string;
+  reason: string;
+  severity: string;
+}
+
+export interface MaliciousPackagesConfig {
+  packages: MaliciousPackage[];
+  patterns: MaliciousPattern[];
+}
+
+export interface ValidationOptions {
+  ignore?: string[];
+  rateLimit?: number;
+  batchSize?: number;
+  onProgress?: (current: number, total: number) => void;
+}

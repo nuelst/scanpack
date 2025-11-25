@@ -1,11 +1,18 @@
-import type { NpmRegistryPort } from '../../domain/ports.js';
+import type { NpmRegistryPort, RateLimiterPort } from '../../domain/ports.js';
 
 export class NpmRegistryAdapter implements NpmRegistryPort {
+  constructor(private readonly rateLimiter?: RateLimiterPort) { }
+
   async checkPackage(packageName: string): Promise<{
     exists: boolean;
     url?: string;
     isSecurityHolding?: boolean;
   }> {
+    // Apply rate limiting if configured
+    if (this.rateLimiter) {
+      await this.rateLimiter.wait();
+    }
+
     try {
       const response = await fetch(`https://registry.npmjs.org/${packageName}`);
 
