@@ -23,15 +23,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+
+      - name: Build ScanPack
+        run: npm run build
 
       - name: Run ScanPack
         id: scanpack
         run: |
-          npx scanpack --ci --json > scanpack-report.json || true
+          node dist/cli.js --ci --json > scanpack-report.json || true
         continue-on-error: true
 
       - name: Upload scan results
