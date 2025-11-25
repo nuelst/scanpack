@@ -2,7 +2,7 @@
 import { vi } from 'vitest';
 
 // Setup global mocks
-if (!global.fetch) {
-  global.fetch = vi.fn();
+if (typeof globalThis.fetch === 'undefined') {
+  globalThis.fetch = vi.fn() as typeof fetch;
 }
 

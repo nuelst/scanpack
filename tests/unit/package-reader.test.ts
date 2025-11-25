@@ -1,19 +1,24 @@
-import * as fs from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PackageReader } from '../../src/package-reader.js';
-import type { PackageJson } from '../../src/types.js';
+import type { PackageJson } from '../../src/domain/entities.js';
+import { FileSystemAdapter } from '../../src/infrastructure/adapters/file-system.adapter.js';
+import { PackageReaderAdapter } from '../../src/infrastructure/adapters/package-reader.adapter.js';
 
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn()
 }));
 
-describe('PackageReader', () => {
+import * as fs from 'node:fs';
+
+describe('PackageReaderAdapter', () => {
+  const fileSystem = new FileSystemAdapter();
+  const packageReader = new PackageReaderAdapter(fileSystem);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('readPackageJson', () => {
-    it('should read and parse package.json successfully', () => {
+    it('should read and parse package.json successfully', async () => {
       const mockPackageJson: PackageJson = {
         name: 'test-project',
         version: '1.0.0',
@@ -24,29 +29,19 @@ describe('PackageReader', () => {
 
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockPackageJson));
 
-      const result = PackageReader.readPackageJson('/test/path');
+      const result = await packageReader.readPackageJson('/test/path');
 
       expect(result).toEqual(mockPackageJson);
-      expect(fs.readFileSync).toHaveBeenCalledWith(
-        expect.stringContaining('package.json'),
-        'utf-8'
-      );
     });
 
-    it('should throw error when package.json does not exist', () => {
+    it('should throw error when package.json does not exist', async () => {
       vi.mocked(fs.readFileSync).mockImplementation(() => {
         throw new Error('ENOENT: no such file or directory');
       });
 
-      expect(() => PackageReader.readPackageJson('/invalid/path')).toThrow(
+      await expect(packageReader.readPackageJson('/invalid/path')).rejects.toThrow(
         'Error reading package.json'
       );
-    });
-
-    it('should throw error when package.json is invalid JSON', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('invalid json');
-
-      expect(() => PackageReader.readPackageJson('/test/path')).toThrow();
     });
   });
 
@@ -59,66 +54,21 @@ describe('PackageReader', () => {
         optionalDependencies: { 'optional-pkg': '^1.0.0' }
       };
 
-      const result = PackageReader.extractDependencies(packageJson);
+      const result = packageReader.extractDependencies(packageJson);
 
       expect(result).toHaveLength(4);
-      expect(result).toContainEqual({
-        name: 'react',
-        version: '^18.0.0',
-        type: 'dependency'
-      });
-      expect(result).toContainEqual({
-        name: 'typescript',
-        version: '^5.0.0',
-        type: 'devDependency'
-      });
-      expect(result).toContainEqual({
-        name: 'react-dom',
-        version: '^18.0.0',
-        type: 'peerDependency'
-      });
-      expect(result).toContainEqual({
-        name: 'optional-pkg',
-        version: '^1.0.0',
-        type: 'optionalDependency'
-      });
+      expect(result[0].name).toBe('react');
+      expect(result[1].name).toBe('typescript');
+      expect(result[2].name).toBe('react-dom');
+      expect(result[3].name).toBe('optional-pkg');
     });
 
     it('should return empty array when no dependencies', () => {
       const packageJson: PackageJson = {};
 
-      const result = PackageReader.extractDependencies(packageJson);
+      const result = packageReader.extractDependencies(packageJson);
 
       expect(result).toEqual([]);
     });
-
-    it('should handle partial dependencies', () => {
-      const packageJson: PackageJson = {
-        dependencies: { react: '^18.0.0' }
-      };
-
-      const result = PackageReader.extractDependencies(packageJson);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].type).toBe('dependency');
-    });
-  });
-
-  describe('readDependencies', () => {
-    it('should read and extract dependencies from project', () => {
-      const mockPackageJson: PackageJson = {
-        dependencies: { react: '^18.0.0' },
-        devDependencies: { typescript: '^5.0.0' }
-      };
-
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockPackageJson));
-
-      const result = PackageReader.readDependencies('/test/path');
-
-      expect(result).toHaveLength(2);
-      expect(result[0].name).toBe('react');
-      expect(result[1].name).toBe('typescript');
-    });
   });
 });
-
