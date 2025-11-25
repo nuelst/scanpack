@@ -18,6 +18,7 @@ export interface ValidationResult {
   isValid: boolean;
   existsOnNpm: boolean;
   isKnownMalicious: boolean;
+  isSecurityHolding?: boolean;
   reason?: string;
   npmUrl?: string;
 }

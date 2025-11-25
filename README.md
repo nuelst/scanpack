@@ -7,6 +7,7 @@ Dependency scanner to detect unknown or malicious packages in Node.js and Bun pr
 - ✅ Validates all dependencies in `package.json`
 - 🔍 Checks if packages exist on npm
 - ⚠️ Detects known malicious packages
+- 🛡️ Automatically detects npm security holding packages (removed packages)
 - 📊 Generates detailed dependency report
 - 🚀 Supports Node.js and Bun projects
 
@@ -71,6 +72,10 @@ console.log(report);
     Type: devDependency
     ⚠️  Package banned from npm for containing malicious scripts
 
+  ✗ malicious-package@1.0.0
+    Type: dependency
+    ⚠️  Security holding package - original package was removed by npm for security reasons
+
   ? unknown-package@1.0.0
     Type: dependency
     ⚠️  Package not found on npm
@@ -82,9 +87,15 @@ console.log(report);
 - `1`: Found malicious dependencies
 - `2`: Found unknown dependencies (but not malicious)
 
-## 🛡️ Malicious Packages List
+## 🛡️ Malicious Packages Detection
 
-The scanner maintains a list of known malicious packages. You can add new packages by editing `src/malicious-packages.json`.
+The scanner uses multiple methods to detect malicious packages:
+
+1. **Known malicious packages list**: Maintains a curated list of known malicious packages in `src/malicious-packages.json`
+2. **Suspicious patterns**: Detects packages matching suspicious naming patterns (regex-based)
+3. **Security holding packages**: Automatically detects npm security holding packages (packages removed by npm for security reasons, marked as `0.0.1-security`)
+
+You can add new packages to the known malicious list by editing `src/malicious-packages.json`. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 ## 📝 Development
 

@@ -27,14 +27,19 @@ const maliciousPackages: MaliciousPackagesConfig = JSON.parse(readFileSync(malic
 
 export class DependencyValidator {
 
-  static async checkNpmPackage(packageName: string): Promise<{ exists: boolean; url?: string }> {
+  static async checkNpmPackage(packageName: string): Promise<{ exists: boolean; url?: string; isSecurityHolding?: boolean }> {
     try {
       const response = await fetch(`https://registry.npmjs.org/${packageName}`);
 
       if (response.ok) {
+        const data = await response.json() as { 'dist-tags'?: { latest?: string } };
+        const latestVersion = data['dist-tags']?.latest;
+        const isSecurityHolding = latestVersion === '0.0.1-security' || latestVersion?.endsWith('-security');
+
         return {
           exists: true,
-          url: `https://www.npmjs.com/package/${packageName}`
+          url: `https://www.npmjs.com/package/${packageName}`,
+          isSecurityHolding
         };
       }
 
@@ -80,16 +85,27 @@ export class DependencyValidator {
   static async validateDependency(dependency: DependencyInfo): Promise<ValidationResult> {
     const npmCheck = await this.checkNpmPackage(dependency.name);
     const maliciousCheck = this.isKnownMalicious(dependency.name);
+    const isSecurityHolding = npmCheck.isSecurityHolding || false;
 
-    const isValid = npmCheck.exists && !maliciousCheck.isMalicious;
-    const isUnknown = !npmCheck.exists && !maliciousCheck.isMalicious;
+    // Security holding packages are considered malicious
+    const isMalicious = maliciousCheck.isMalicious || isSecurityHolding;
+    const isValid = npmCheck.exists && !isMalicious;
+    const isUnknown = !npmCheck.exists && !isMalicious;
+
+    let reason = maliciousCheck.reason;
+    if (isSecurityHolding && !maliciousCheck.isMalicious) {
+      reason = 'Security holding package - original package was removed by npm for security reasons';
+    } else if (isUnknown) {
+      reason = 'Package not found on npm';
+    }
 
     return {
       dependency,
       isValid,
       existsOnNpm: npmCheck.exists,
-      isKnownMalicious: maliciousCheck.isMalicious,
-      reason: maliciousCheck.reason || (isUnknown ? 'Package not found on npm' : undefined),
+      isKnownMalicious: isMalicious,
+      isSecurityHolding,
+      reason,
       npmUrl: npmCheck.url
     };
   }
@@ -109,8 +125,8 @@ export class DependencyValidator {
 
     const validDependencies = results.filter(r => r.isValid).length;
     const invalidDependencies = results.filter(r => !r.isValid).length;
-    const maliciousDependencies = results.filter(r => r.isKnownMalicious).length;
-    const unknownDependencies = results.filter(r => !r.existsOnNpm && !r.isKnownMalicious).length;
+    const maliciousDependencies = results.filter(r => r.isKnownMalicious || r.isSecurityHolding).length;
+    const unknownDependencies = results.filter(r => !r.existsOnNpm && !r.isKnownMalicious && !r.isSecurityHolding).length;
 
     return {
       totalDependencies: dependencies.length,

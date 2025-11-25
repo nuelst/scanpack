@@ -39,12 +39,16 @@ program
         console.log(chalk.bold('\n⚠️  Problematic Dependencies:\n'));
 
         for (const result of problematic) {
-          const { dependency, isKnownMalicious, reason, npmUrl } = result;
+          const { dependency, isKnownMalicious, isSecurityHolding, reason, npmUrl } = result;
 
-          if (isKnownMalicious) {
+          if (isKnownMalicious || isSecurityHolding) {
             console.log(chalk.red(`  ✗ ${dependency.name}@${dependency.version}`));
             console.log(chalk.red(`    Type: ${dependency.type}`));
-            console.log(chalk.red(`    ⚠️  ${reason || 'Known malicious package'}`));
+            if (isSecurityHolding) {
+              console.log(chalk.red(`    ⚠️  ${reason || 'Security holding package'}`));
+            } else {
+              console.log(chalk.red(`    ⚠️  ${reason || 'Known malicious package'}`));
+            }
           } else {
             console.log(chalk.yellow(`  ? ${dependency.name}@${dependency.version}`));
             console.log(chalk.yellow(`    Type: ${dependency.type}`));
