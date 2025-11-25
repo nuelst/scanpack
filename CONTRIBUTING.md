@@ -1,5 +1,15 @@
 # Contributing to the Malicious Packages List
 
+## How Detection Works
+
+ScanPack uses three methods to detect malicious packages:
+
+1. **Known malicious packages list**: A curated list in `src/malicious-packages.json`
+2. **Suspicious patterns**: Regex patterns to detect suspicious package names
+3. **Security holding packages**: Automatically detects npm security holding packages (packages removed by npm and marked as `0.0.1-security`)
+
+> **Note**: Security holding packages are automatically detected and don't need to be added to the list manually.
+
 ## How to Add a Malicious Package
 
 To add a new package to the known malicious list, edit the `src/malicious-packages.json` file.
