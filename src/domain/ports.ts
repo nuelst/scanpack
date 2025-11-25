@@ -11,6 +11,14 @@ export interface LoggerPort {
 }
 
 /**
+ * Port for rate limiting
+ */
+export interface RateLimiterPort {
+  wait(): Promise<void>;
+  reset(): void;
+}
+
+/**
  * Port for reading files from filesystem
  */
 export interface FileSystemPort {

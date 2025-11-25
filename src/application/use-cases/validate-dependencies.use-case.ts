@@ -1,4 +1,4 @@
-import type { Dependency, ValidationReport, ValidationResult } from '../../domain/entities.js';
+import type { Dependency, ValidationOptions, ValidationReport, ValidationResult } from '../../domain/entities.js';
 import type { MaliciousPackageRepositoryPort, NpmRegistryPort } from '../../domain/ports.js';
 
 export class ValidateDependenciesUseCase {
@@ -7,16 +7,44 @@ export class ValidateDependenciesUseCase {
     private readonly maliciousPackageRepository: MaliciousPackageRepositoryPort
   ) { }
 
-  async execute(dependencies: Dependency[]): Promise<ValidationReport> {
+  async execute(dependencies: Dependency[], options?: ValidationOptions): Promise<ValidationReport> {
     const results: ValidationResult[] = [];
 
-    const batchSize = 10;
-    for (let i = 0; i < dependencies.length; i += batchSize) {
-      const batch = dependencies.slice(i, i + batchSize);
+    // Filter ignored dependencies
+    const ignoreSet = new Set(options?.ignore?.map(name => name.toLowerCase()) || []);
+    const filteredDependencies = dependencies.filter(
+      dep => !ignoreSet.has(dep.name.toLowerCase())
+    );
+
+    // Dynamic batch size based on latency
+    let batchSize = options?.batchSize || 10;
+    const minBatchSize = 5;
+    const maxBatchSize = 50;
+
+    for (let i = 0; i < filteredDependencies.length; i += batchSize) {
+      const batchStart = Date.now();
+      const batch = filteredDependencies.slice(i, i + batchSize);
+
       const batchResults = await Promise.all(
         batch.map(dep => this.validateDependency(dep))
       );
+
       results.push(...batchResults);
+
+      // Calculate latency and adjust batch size
+      const batchLatency = Date.now() - batchStart;
+
+      // Adjust batch size: if fast, increase; if slow, decrease
+      if (batchLatency < 500 && batchSize < maxBatchSize) {
+        batchSize = Math.min(batchSize + 5, maxBatchSize);
+      } else if (batchLatency > 2000 && batchSize > minBatchSize) {
+        batchSize = Math.max(batchSize - 5, minBatchSize);
+      }
+
+      // Progress callback
+      if (options?.onProgress) {
+        options.onProgress(results.length, filteredDependencies.length);
+      }
     }
 
     const validDependencies = results.filter(r => r.isValid).length;

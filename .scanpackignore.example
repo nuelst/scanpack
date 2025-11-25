@@ -1,0 +1,15 @@
+# ScanPack Ignore File
+# Add package names (one per line) that should be ignored during scanning
+# Lines starting with # are comments
+
+# Internal/private packages
+internal-package
+@company/private-lib
+
+# Legacy packages that are known to be safe
+legacy-lib
+old-but-safe-package
+
+# Packages that are not on npm but are known to be safe
+local-package
+

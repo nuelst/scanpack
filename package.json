@@ -1,6 +1,6 @@
 {
   "name": "scanpack",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "Dependency scanner to detect unknown or malicious packages in Node.js and Bun projects",
   "main": "dist/index.js",
   "type": "module",
@@ -33,11 +33,13 @@
   },
   "dependencies": {
     "chalk": "^5.6.2",
+    "cli-progress": "^3.12.0",
     "commander": "^12.1.0",
-    "pino": "^9.4.0",
-    "pino-pretty": "^11.2.2"
+    "pino": "^9.14.0",
+    "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
+    "@types/cli-progress": "^3.11.0",
     "@types/node": "^20.19.25",
     "@vitest/coverage-v8": "^1.6.1",
     "tsx": "^4.20.6",
@@ -46,8 +48,9 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && npm run copy-assets",
+    "build": "tsc && npm run copy-assets && npm run add-shebang",
     "copy-assets": "cp src/malicious-packages.json dist/malicious-packages.json",
+    "add-shebang": "node -e \"const fs=require('fs');const f='dist/cli.js';const c=fs.readFileSync(f,'utf8');if(!c.startsWith('#!/'))fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);\"",
     "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "cli": "tsx src/cli.ts",
