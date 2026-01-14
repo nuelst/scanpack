@@ -13,6 +13,15 @@ export interface PackageJson {
   optionalDependencies?: Record<string, string>;
 }
 
+export interface Vulnerability {
+  id: string;
+  title: string;
+  severity: 'critical' | 'high' | 'moderate' | 'low' | 'info';
+  package: string;
+  patchedVersions?: string;
+  url?: string;
+}
+
 export interface ValidationResult {
   dependency: Dependency;
   isValid: boolean;
@@ -21,6 +30,18 @@ export interface ValidationResult {
   isSecurityHolding?: boolean;
   reason?: string;
   npmUrl?: string;
+  vulnerabilities?: Vulnerability[];
+  latestVersion?: string;
+  isOutdated?: boolean;
+}
+
+export interface AuditSummary {
+  total: number;
+  critical: number;
+  high: number;
+  moderate: number;
+  low: number;
+  info: number;
 }
 
 export interface ValidationReport {
@@ -30,6 +51,8 @@ export interface ValidationReport {
   maliciousDependencies: number;
   unknownDependencies: number;
   results: ValidationResult[];
+  vulnerabilities?: Vulnerability[];
+  auditSummary?: AuditSummary;
 }
 
 export interface MaliciousPackage {
@@ -54,4 +77,7 @@ export interface ValidationOptions {
   rateLimit?: number;
   batchSize?: number;
   onProgress?: (current: number, total: number) => void;
+  includeAudit?: boolean;
+  includeTransitive?: boolean;
+  checkOutdated?: boolean;
 }

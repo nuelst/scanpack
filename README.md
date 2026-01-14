@@ -1,24 +1,27 @@
-# 🔒 ScanPack
+# ScanPack
 
 Dependency scanner to detect unknown or malicious packages in Node.js and Bun projects.
 
-## 🎯 Features
+## Features
 
-- ✅ Validates all dependencies in `package.json`
-- 🔍 Checks if packages exist on npm
-- ⚠️ Detects known malicious packages
-- 🛡️ Automatically detects npm security holding packages (removed packages)
-- 📊 Generates detailed dependency report
-- 🚀 Supports Node.js and Bun projects
-- ⚡ Dynamic batch processing for optimal performance
-- 📈 Progress bar for visual feedback
-- 🚫 Ignore specific packages (`.scanpackignore` or `--ignore`)
-- 🔄 Rate limiting protection
-- 🤖 CI/CD mode for clean pipeline output
-- 🗑️ Auto-remove dangerous dependencies (`-rd` / `--remove-dangerous`)
-- 🔗 GitHub Actions integration
+- Validates all dependencies in `package.json`
+- Checks if packages exist on npm registry
+- Detects known malicious packages
+- Automatically detects npm security holding packages (removed packages)
+- npm audit integration - Checks for known vulnerabilities (CVEs)
+- Transitive dependencies - Scans dependencies from lock files
+- Generates detailed dependency report
+- Supports Node.js and Bun projects
+- Dynamic batch processing for optimal performance
+- Progress bar for visual feedback
+- Ignore specific packages (`.scanpackignore` or `--ignore`)
+- Rate limiting protection with caching
+- CI/CD mode for clean pipeline output
+- Auto-remove dangerous dependencies (`-rd` / `--remove-dangerous`)
+- GitHub Actions integration
+- Check for outdated packages
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install -g scanpack
@@ -26,9 +29,9 @@ npm install -g scanpack
 bun add -g scanpack
 ```
 
-## 🚀 Usage
+## Usage
 
-### As CLI
+### Command Line Interface
 
 ```bash
 # Scan current project
@@ -57,6 +60,22 @@ scanpack -rd
 # or
 scanpack --remove-dangerous
 
+# By default, scanpack includes:
+# - npm audit vulnerability check (use --no-audit to disable)
+# - outdated packages check (use --no-outdated to disable)
+
+# Include transitive dependencies from lock files
+scanpack --transitive
+
+# Disable audit check (faster, but less secure)
+scanpack --no-audit
+
+# Disable outdated check
+scanpack --no-outdated
+
+# Combine multiple options
+scanpack --transitive --no-outdated
+
 # Show help
 scanpack --help
 ```
@@ -78,7 +97,7 @@ You can ignore packages in two ways:
    legacy-lib
    ```
 
-### As Module
+### Programmatic Usage
 
 ```typescript
 import { PackageReader, DependencyValidator } from 'scanpack';
@@ -92,43 +111,58 @@ const report = await DependencyValidator.validateDependencies(dependencies);
 console.log(report);
 ```
 
-## 📊 Example Output
+## Example Output
 
 ```
-🔍 Scanning dependencies...
+Scanning dependencies...
 
-📦 Found 25 dependencies
+Found 25 dependencies
 
-📊 Validation Summary:
+Validation Summary:
 
   Total: 25
-  ✓ Valid: 23
-  ✗ Invalid: 2
-  ⚠ Malicious: 1
-  ? Unknown: 1
+  Valid: 23
+  Invalid: 2
+  Malicious: 1
+  Unknown: 1
 
-⚠️  Problematic Dependencies:
+Problematic Dependencies:
 
-  ✗ xdater@6.2.0
+  xdater@6.2.0
     Type: devDependency
-    ⚠️  Package banned from npm for containing malicious scripts
+    Package banned from npm for containing malicious scripts
 
-  ✗ malicious-package@1.0.0
+  malicious-package@1.0.0
     Type: dependency
-    ⚠️  Security holding package - original package was removed by npm for security reasons
+    Security holding package - original package was removed by npm for security reasons
 
-  ? unknown-package@1.0.0
+  unknown-package@1.0.0
     Type: dependency
-    ⚠️  Package not found on npm
+    Package not found on npm
+
+Security Audit Summary:
+
+  Total vulnerabilities: 3
+  Critical: 1
+  High: 1
+  Moderate: 1
+
+Problematic Dependencies:
+
+  vulnerable-package@1.0.0
+    Type: dependency
+    CRITICAL: Remote Code Execution vulnerability
+       Patched in: >=2.0.0
 ```
 
-## 🔧 Exit Codes
+## Exit Codes
 
 - `0`: All dependencies are valid
 - `1`: Found malicious dependencies
 - `2`: Found unknown dependencies (but not malicious)
+- `3`: Found critical/high vulnerabilities (npm audit is enabled by default)
 
-## ⚙️ Options
+## Options
 
 | Option | Description |
 |--------|-------------|
@@ -138,9 +172,16 @@ console.log(report);
 | `-i, --ignore <packages>` | Comma-separated list of packages to ignore |
 | `-r, --rate-limit <number>` | Maximum requests per second to npm registry (default: 10) |
 | `-rd, --remove-dangerous` | Automatically remove dangerous dependencies from package.json |
+| `-a, --audit` | Enable npm audit vulnerability check (enabled by default) |
+| `--no-audit` | Disable npm audit vulnerability check |
+| `-t, --transitive` | Include transitive dependencies from lock files |
+| `-o, --outdated` | Check for outdated packages (enabled by default) |
+| `--no-outdated` | Disable outdated packages check |
 | `-h, --help` | Display help information |
 
-## 🛡️ Malicious Packages Detection
+## Security Features
+
+### Malicious Packages Detection
 
 The scanner uses multiple methods to detect malicious packages:
 
@@ -150,32 +191,57 @@ The scanner uses multiple methods to detect malicious packages:
 
 You can add new packages to the known malicious list by editing `src/malicious-packages.json`. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
-## 📝 Development
+### Vulnerability Detection (npm audit)
+
+**Enabled by default!** ScanPack automatically integrates with npm's audit system to check for known vulnerabilities (CVEs) in your dependencies. This complements the malicious package detection by identifying security issues in legitimate packages.
+
+You can disable it with `--no-audit` if needed (e.g., for faster scans or when npm audit is not available).
+
+The audit check:
+- Runs `npm audit` internally
+- Reports vulnerabilities by severity (critical, high, moderate, low, info)
+- Shows which packages are affected
+- Indicates if patches are available
+
+### Transitive Dependencies
+
+The `--transitive` flag enables scanning of all dependencies, including indirect ones from lock files:
+- Reads `package-lock.json` (npm)
+- Reads `yarn.lock` (Yarn)
+- Reads `pnpm-lock.yaml` (pnpm)
+
+This provides comprehensive coverage of your entire dependency tree.
+
+### Outdated Packages
+
+**Enabled by default!** ScanPack automatically checks if your installed packages have newer versions available, helping you keep dependencies up to date. You can disable it with `--no-outdated` if needed.
+
+## Development
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Run in development mode
-npm run dev
+pnpm run dev
 
 # Build
-npm run build
+pnpm run build
 
 # Test CLI locally
-npm run cli
+pnpm run cli
 
 # Run tests
-npm test
+pnpm test
 
 # Run tests in watch mode
-npm run test:watch
+pnpm run test:watch
 
 # Run tests with coverage
-npm run test:coverage
+pnpm run test:coverage
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Feel free to:
 
@@ -183,10 +249,12 @@ Contributions are welcome! Feel free to:
 - Improve detection of suspicious patterns
 - Add new features
 
-## 📄 License
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## License
 
 MIT
 
-## 🔗 Links
+## Links
 
 - [GitHub Repository](https://github.com/nuelst/scanpack)

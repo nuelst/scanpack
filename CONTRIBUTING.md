@@ -89,5 +89,5 @@ When adding malicious packages, make sure you have evidence from reliable source
 After adding a new package, test with:
 
 ```bash
-npm run cli -- /path/to/project-with-malicious-package
+pnpm run cli -- /path/to/project-with-malicious-package
 ```

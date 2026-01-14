@@ -19,19 +19,19 @@ tests/
 
 ```bash
 # Run all tests
-npm test
+pnpm test
 
 # Run in watch mode
-npm run test:watch
+pnpm run test:watch
 
 # Run with coverage
-npm run test:coverage
+pnpm run test:coverage
 
 # Run only unit tests
-npm test -- tests/unit
+pnpm test -- tests/unit
 
 # Run only integration tests
-npm test -- tests/integration
+pnpm test -- tests/integration
 ```
 
 ## Test Strategy

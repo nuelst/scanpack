@@ -6,3 +6,10 @@ dist/
 *.tsbuildinfo
 coverage/
 .nyc_output/
+
+.docs/
+
+# Lock files de outros gerenciadores (usamos apenas pnpm)
+package-lock.json
+yarn.lock
+bun.lockb

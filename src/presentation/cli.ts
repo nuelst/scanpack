@@ -23,6 +23,11 @@ program
   .option('-i, --ignore <packages>', 'Comma-separated list of packages to ignore')
   .option('-r, --rate-limit <number>', 'Maximum requests per second to npm registry', '10')
   .option('-rd, --remove-dangerous', 'Automatically remove dangerous dependencies from package.json')
+  .option('-a, --audit', 'Enable npm audit vulnerability check', true)
+  .option('--no-audit', 'Disable npm audit vulnerability check')
+  .option('-t, --transitive', 'Include transitive dependencies from lock files')
+  .option('-o, --outdated', 'Check for outdated packages', true)
+  .option('--no-outdated', 'Disable outdated packages check')
   .addHelpText('after', `
 Examples:
   $ scanpack
@@ -37,6 +42,7 @@ Exit Codes:
   0  All dependencies are valid
   1  Found malicious dependencies
   2  Found unknown dependencies (but not malicious)
+  3  Found critical/high vulnerabilities (when using --audit)
 
 For more information, visit: https://github.com/nuelst/scanpack
   `)
@@ -80,18 +86,31 @@ For more information, visit: https://github.com/nuelst/scanpack
         progressBar.start(dependencies.length, 0);
       }
 
-      // Create use case with rate limiting
-      const validateDependenciesUseCase = createValidateDependenciesUseCase(rateLimit);
+      // Create use case with rate limiting and optional features
+      // By default, enable audit and outdated checks for better security
+      // Transitive dependencies are optional as they can be slow
+      const includeAudit = options.audit !== false; // Default: true (Commander sets to false only if --no-audit)
+      const includeTransitive = options.transitive || false; // Default: false (can be slow)
+      const checkOutdated = options.outdated !== false; // Default: true (Commander sets to false only if --no-outdated)
+
+      const validateDependenciesUseCase = createValidateDependenciesUseCase(
+        rateLimit,
+        includeAudit,
+        includeTransitive
+      );
 
       const report = await validateDependenciesUseCase.execute(dependencies, {
         ignore: ignoreList,
         rateLimit,
+        includeAudit,
+        includeTransitive,
+        checkOutdated,
         onProgress: (current, total) => {
           if (progressBar) {
             progressBar.update(current);
           }
         }
-      });
+      }, path);
 
       if (progressBar) {
         progressBar.stop();
@@ -168,13 +187,36 @@ For more information, visit: https://github.com/nuelst/scanpack
       console.log(`  ${chalk.red('⚠ Malicious:')} ${chalk.red(report.maliciousDependencies)}`);
       console.log(`  ${chalk.yellow('? Unknown:')} ${chalk.yellow(report.unknownDependencies)}`);
 
+      // Show audit summary if available
+      if (report.auditSummary) {
+        const { auditSummary } = report;
+        console.log(chalk.bold('\n🔒 Security Audit Summary:\n'));
+        if (auditSummary.total > 0) {
+          console.log(`  ${chalk.red('Total vulnerabilities:')} ${chalk.red(auditSummary.total)}`);
+          if (auditSummary.critical > 0) {
+            console.log(`  ${chalk.red('Critical:')} ${chalk.red(auditSummary.critical)}`);
+          }
+          if (auditSummary.high > 0) {
+            console.log(`  ${chalk.red('High:')} ${chalk.red(auditSummary.high)}`);
+          }
+          if (auditSummary.moderate > 0) {
+            console.log(`  ${chalk.yellow('Moderate:')} ${chalk.yellow(auditSummary.moderate)}`);
+          }
+          if (auditSummary.low > 0) {
+            console.log(`  ${chalk.gray('Low:')} ${chalk.gray(auditSummary.low)}`);
+          }
+        } else {
+          console.log(`  ${chalk.green('✓ No vulnerabilities found')}`);
+        }
+      }
+
       const problematic = report.results.filter(r => !r.isValid);
 
       if (problematic.length > 0) {
         console.log(chalk.bold('\n⚠️  Problematic Dependencies:\n'));
 
         for (const result of problematic) {
-          const { dependency, isKnownMalicious, isSecurityHolding, reason, npmUrl } = result;
+          const { dependency, isKnownMalicious, isSecurityHolding, reason, npmUrl, vulnerabilities, isOutdated, latestVersion } = result;
 
           if (isKnownMalicious || isSecurityHolding) {
             console.log(chalk.red(`  ✗ ${dependency.name}@${dependency.version}`));
@@ -190,6 +232,26 @@ For more information, visit: https://github.com/nuelst/scanpack
             console.log(chalk.yellow(`    ⚠️  ${reason || 'Package not found on npm'}`));
           }
 
+          // Show vulnerabilities if any
+          if (vulnerabilities && vulnerabilities.length > 0) {
+            for (const vuln of vulnerabilities) {
+              const severityColor = vuln.severity === 'critical' || vuln.severity === 'high'
+                ? chalk.red
+                : vuln.severity === 'moderate'
+                  ? chalk.yellow
+                  : chalk.gray;
+              console.log(severityColor(`    🔒 ${vuln.severity.toUpperCase()}: ${vuln.title}`));
+              if (vuln.patchedVersions) {
+                console.log(chalk.gray(`       Patched in: ${vuln.patchedVersions}`));
+              }
+            }
+          }
+
+          // Show outdated info
+          if (isOutdated && latestVersion) {
+            console.log(chalk.yellow(`    📦 Outdated: latest is ${latestVersion}`));
+          }
+
           if (options.verbose && npmUrl) {
             console.log(chalk.gray(`    URL: ${npmUrl}`));
           }
@@ -200,8 +262,11 @@ For more information, visit: https://github.com/nuelst/scanpack
         console.log(chalk.green('\n✅ All dependencies are valid!\n'));
       }
 
+      // Exit codes: 0 = all good, 1 = malicious, 2 = unknown, 3 = vulnerabilities
       if (report.maliciousDependencies > 0) {
         process.exit(1);
+      } else if (report.auditSummary && report.auditSummary.total > 0 && (report.auditSummary.critical > 0 || report.auditSummary.high > 0)) {
+        process.exit(3);
       } else if (report.unknownDependencies > 0) {
         process.exit(2);
       }

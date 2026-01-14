@@ -34,7 +34,40 @@ export interface NpmRegistryPort {
     exists: boolean;
     url?: string;
     isSecurityHolding?: boolean;
+    latestVersion?: string;
   }>;
+}
+
+/**
+ * Port for running npm audit
+ */
+export interface NpmAuditPort {
+  runAudit(projectPath: string): Promise<{
+    vulnerabilities: Array<{
+      id: string;
+      title: string;
+      severity: 'critical' | 'high' | 'moderate' | 'low' | 'info';
+      package: string;
+      patchedVersions?: string;
+      url?: string;
+    }>;
+    summary: {
+      total: number;
+      critical: number;
+      high: number;
+      moderate: number;
+      low: number;
+      info: number;
+    };
+  }>;
+}
+
+/**
+ * Port for reading lock files
+ */
+export interface LockFileReaderPort {
+  readLockFile(projectPath: string): Promise<Dependency[]>;
+  hasLockFile(projectPath: string): boolean;
 }
 
 /**

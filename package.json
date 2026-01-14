@@ -48,14 +48,15 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && npm run copy-assets && npm run add-shebang",
+    "build": "tsc && pnpm run copy-assets && pnpm run add-shebang",
     "copy-assets": "cp src/malicious-packages.json dist/malicious-packages.json",
     "add-shebang": "node -e \"const fs=require('fs');const f='dist/cli.js';const c=fs.readFileSync(f,'utf8');if(!c.startsWith('#!/'))fs.writeFileSync(f,'#!/usr/bin/env node\\n'+c);\"",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "start": "node dist/index.js",
     "cli": "tsx src/cli.ts",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage"
-  }
+  },
+  "packageManager": "pnpm@9.0.0"
 }
